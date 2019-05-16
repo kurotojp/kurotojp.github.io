@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>reveal.js</title>
+
+    <link rel="stylesheet" href="css/reset.css">
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/league.css" id="theme">
+
+    <!-- Theme used for syntax highlighting of code -->
+    <link rel="stylesheet" href="lib/css/monokai.css">
+
+    <!-- Printing and PDF exports -->
+    <script>
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = window.location.search.match(/print-pdf/gi) ? 'css/print/pdf.css' : 'css/print/paper.css';
+        document.getElementsByTagName('head')[0].appendChild(link);
+    </script>
+</head>
+
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <section data-markdown=""
+                data-separator="^\n-----$"
+                data-separator-vertical="^\n>>>$">
+                <script type="text/template">
+        # Web
+        - - -
+        久保　允人
+        
+        -----
+        ### Webのいろいろ
+        - - -
+        - Web問題を解くには
+            - Webに関する様々な知識が必要
+            - 脆弱性のパターンが多い
+            - 期間が終了するとサーバーが閉じられることがある
+        - ツール
+            - OWASP ZAP
+            - (Burp Suite)
+            - sqlmap
+        
+        -----
+        ### どんな脆弱性が出題されるか
+        - - -
+        - [このサイト](https://graneed.hatenablog.com/entry/2018/12/16/003745)
+        にまとめられている
+
+        - とりあえず簡単な問題を落とさない
+
+        -----
+        ### 今日のやるやつ
+        - - -
+        - SQLインジェクション
+                - データベースを扱うサイトに対しての攻撃
+                - できること
+                    - 認証の突破
+                    - SELECT文の改竄
+                    - など
+
+        -----
+        ## SQL
+        - - -
+        - データベースを操作するための文
+        - 例
+            - SELECT * FROM users WHERE name=’taro’;
+            - INSERT INTO users VALUES (‘jiro’,1);
+            - UPDATE users SET value=2 WHERE name=’jiro’;
+            - DELETE FROM users WHERE name=’jiro’;
+            - SELECT 1 FROM uers;
+
+        -----
+        ## SQL 
+        - - -
+        - その他の大事なとこ
+            - ()丸括弧の有無
+            - コメント MySQLでは#と\--その他は\-- などのデータベースの判別
+            - 'か"か
+            - ;で区切ると2文に(PostgreSQL,特定の条件下のMySQL)
+            - ORDER BY 数 でカラム数(データの数)を把握 数をソートの基準に
+            - UNION で表の連結が可能に
+        
+        -----
+        ### 脆弱なコード例
+        - - -
+        ``` 
+            <?php
+            /*データベースへの接続(省略)*/
+            $username = $_POST["username"];
+            $password = $_POST["password"];
+
+            $query = "SELECT * FROM users WHERE name = '{$name}' AND pass = '$pass'";
+            $query = 'SELECT username FROM users WHERE id = ' . $id ;
+
+            ?>
+        ```
+
+        -----
+        ### SQLインジェクション例
+        - - -
+
+        - nameにadmin,passにwordと入力
+            - SELECT * FROM users WHERE name='admin' AND pass='word';
+
+        - nameに' OR 1=1-- passにwordと入力
+            - SELECT * FROM users WHERE name='' OR 1=1--' AND pass='word'
+            -コメントを除くと
+            - SELECT * FROM users WHERE name='' OR 1=1
+            - 条件はnameがから文字列か1=1のとき→真を返す
+
+        -----
+       #### 他のテーブル名、カラム名を抜き出す
+        - - -  
+        - MySQLの場合
+            - メタデータはINFORMATION＿SCHEMAに格納されている
+            - 要素はTABLESとCOLUMNSなど
+            - これらも通常のテーブルと同じように操作することができる
+        - PostgreSQLの場合
+            - pg_catalogにpg_tablesなど
+        - SQLiteの場合
+            - sqlite_master
+            - カラムは調べてみてね
+        - これが解かれば、UNION句等を用いて読み出せる
+
+        -----
+        ### 演習
+        - - - 
+        - Cpaw Q22.Baby's SQLi - Stage 1-
+        [https://ctf.spica.bz/baby_sql/](https://ctf.spica.bz/baby_sql/ )
+        - Cpaw Q24.Baby's SQLi - Stage 2-1問目のnext-stage-urlを見て
+        - Websec LevelOne
+        [https://websec.fr/level01/index.php](https://websec.fr/level01/index.php)
+
+        **解答例は次ページ**
+
+        -----
+        #### 解答例(他の方法を用いた方は発表お願いします)
+        - - - 
+        - 1問目
+            - palloc_homeテーブルにあるから
+            - SELECT * FROM palloc_home;
+            - で読み出せる
+
+        - - - 
+        - 2問目
+            - passwordがわからない
+            - エラーもでないので、とりあえず
+            - 'OR 1=1-- 
+            - でログインできる
+
+        -----
+        #### 解答例(他の方法があったら共有してね)
+        - - -
+        - 3問目
+          - ソースコードが見れる
+          - SELECT id,username FROM users WHERE id=hoge LIMIT 1;
+          - LIMIT 1なので、1行しか取り出さない→UNIONだけでは難しいかも
+          - SQLiteを使っている
+          - [sqlite_masterを利用してみよう](https://www.dbonline.jp/sqlite/table/index2.html
+
+        -----
+        #### 解答例(他の方法があったら共有してね)
+        - - -
+          - sqlite_masterのsqlにCREATE文が入っている
+          - 1 AND 1=0 UNION ALL select 1,sql from sqlite_master -- 
+          - CREATE文を見るとpasswordというものが入っていることがわかる
+          - 1 AND 1=0 UNION ALL SELECT id, password from users where id=1 -- 
+
+        -----
+        ### ソースコードが見られなかったら
+        - - -
+          - 1 AND 1=0 UNION ALL select 1,tbl_name from sqlite_master -- '
+          - これで通ればsqliteを使っていることとtble_nameがわかるかも
+          - その後は同じ感じ
+
+        -----
+        ### おわりに
+        - - -
+        今回は簡単な問題だけやった
+
+        CTFのwarm-upなどではこんな問題がでる
+
+        blind SQL injectionはまた今度
+
+        <aside class="notes">
+        発表者が見るノート   
+        伝えたいことをメモ  
+        </aside>
+        
+                </script>
+            </section>
+            <!-- 最後のスライドを画像だけにしてみる -->
+            <!--<section data-background="image/last.png">
+            </section>-->
+        </div>
+    </div>
+
+    <script src="js/reveal.js"></script>
+
+    <script>
+        // More info about config & dependencies:
+        // - https://github.com/hakimel/reveal.js#configuration
+        // - https://github.com/hakimel/reveal.js#dependencies
+        Reveal.initialize({
+            dependencies: [{
+                src: 'plugin/markdown/marked.js'
+            }, {
+                src: 'plugin/markdown/markdown.js'
+            }, {
+                src: 'plugin/notes/notes.js',
+                async: true
+            }, {
+                src: 'plugin/highlight/highlight.js',
+                async: true
+            }]
+        });
+    </script>
+</body>
+
+</html>
