@@ -1,2 +1,2 @@
 # kurotojp.github.io
-RiST
+なんかつくる
